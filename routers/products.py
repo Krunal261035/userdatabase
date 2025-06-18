@@ -1,7 +1,7 @@
 from fastapi import APIRouter,Depends
 from models.AdminModel import ProductCategoryModel,ProductModel
 from models.models import UserModel
-from schemas.products import ProductCategory,ProductSchema
+from schemas.products import ProductCategory,ProductSchema,UserResponseSchema
 from sqlalchemy.orm import  Session
 from database import get_db
 from utils import *
@@ -32,3 +32,8 @@ def Product(body:ProductSchema,db:Session=Depends(get_db),token:UserModel = Depe
         return {"message":"true","body":product}
     except Exception as e:
         print(e)
+
+@product.get("/users",response_model=list[UserResponseSchema])
+def user(db:Session = Depends(get_db),token:UserModel=Depends(get_current_admin)):
+    user = db.query(UserModel).filter(UserModel.role == "user").all()
+    return user

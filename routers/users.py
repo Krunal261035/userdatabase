@@ -1,13 +1,11 @@
-from fastapi import FastAPI, Depends, HTTPException,APIRouter
+from fastapi import FastAPI, Depends, HTTPException,APIRouter,Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import  Session
 from models.models import UserModel,AddressModel
-from schemas.schema import UserSchema,AddressSchema,UpdateUserSchema,AddressResponseSchema
+from schemas.schema import UserSchema,AddressSchema,UpdateUserSchema,AddressSchemaDisplay,AddToCartSchema
 from database import get_db
 from utils import *
-import uuid, random
-from models.AdminModel import ProductModel
-
+from models.AdminModel import ProductModel,CartModel,CartitemsModel
 # FastAPI App
 router = APIRouter()
 
@@ -31,7 +29,7 @@ def add(body:UserSchema,db:Session = Depends(get_db)):
 
 @router.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(UserModel).filter(UserModel.username == form_data.username).first()
+    user = db.query(UserModel).filter(UserModel.email == form_data.username).first()
     if not user or not verify_password(form_data.password, user.password_hash):
         raise HTTPException(status_code=400, detail="Invalid username or password")
     token = create_token(data={"sub": str(user.id), "role": user.role,"username":user.username,"email":user.email})
@@ -86,7 +84,7 @@ def update_user(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/delete_account/")
+@router.delete("/delete_account")
 def delete_account(db:Session= Depends(get_db),token:UserModel=Depends(get_current_user)):
     try:
 
@@ -94,7 +92,6 @@ def delete_account(db:Session= Depends(get_db),token:UserModel=Depends(get_curre
         print(user)
         db.delete(user)
         db.commit()
-        # db.refresh(user)
         return {"Message":"True","user":"Deleted successfully"}
     except Exception as e:
         return e
@@ -119,10 +116,10 @@ def add_address(body:AddressSchema,db:Session = Depends(get_db),token :UserModel
     except Exception as e:
         return {"detail":str(e)}
     
-@router.get("/Get_address")
+@router.get("/Get_address",response_model=list[AddressSchemaDisplay])
 def get_address(db:Session = Depends(get_db),token:UserModel=Depends(get_current_user)):
     user = db.query(AddressModel).filter(AddressModel.user_id == token.id).all()
-    return {"body":user}
+    return user
 
 @router.put("/update_Address/{id}")
 def update_address(id: int,body:AddressSchema,db:Session=Depends(get_db),current_user:UserModel=Depends(get_current_user)):
@@ -155,3 +152,55 @@ def deleteaddress(id:int,db: Session = Depends(get_db), token: UserModel = Depen
 def products(db:Session=Depends(get_db)):
     products = db.query(ProductModel).all()
     return {"body": products}
+
+@router.post("/add_Cart")
+def cart(body:AddToCartSchema,db:Session= Depends(get_db),token:UserModel= Depends(get_current_user)):
+    try:
+        cart = db.query(CartModel).filter_by(user_id = token.id).first()
+        if not cart:
+            cart = CartModel(user_id = token.id)
+            db.add(cart)
+            db.commit()
+            db.refresh(cart)
+        
+        existing_items = db.query(CartitemsModel).filter_by(id= cart.id,product_id = body.product_id).first()
+        if existing_items:
+            existing_items.quantity += body.quantity
+            db.commit()
+            db.refresh(existing_items)
+            return existing_items
+        
+        new_items = CartitemsModel(cart_id = cart.id,product_id = body.product_id,quantity = body.quantity)
+        db.add(new_items)
+        db.commit()
+        db.refresh(new_items)
+        return new_items
+    except Exception as e:
+        return e
+
+
+@router.get("/cart/total")
+def total_cart(db:Session = Depends(get_db),token:UserModel=Depends(get_current_user)):
+    results = (
+        db.query(
+            UserModel.username,
+            ProductModel.product_name,
+            CartitemsModel.quantity,
+            ProductModel.price,
+            (CartitemsModel.quantity * ProductModel.price).label("total")
+        )
+        .join(CartModel, CartModel.user_id == UserModel.id)
+        .join(CartitemsModel, CartitemsModel.cart_id == CartModel.id)
+        .join(ProductModel, ProductModel.id == CartitemsModel.product_id)
+        .all()
+    )
+    return [
+        {
+            "username": row.username,
+            "product_name": row.product_name,
+            "quantity": row.quantity,
+            "price": float(row.price),
+            "total": float(row.total)
+        }
+        for row in results
+    ]

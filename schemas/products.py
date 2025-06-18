@@ -17,3 +17,16 @@ class ProductSchema(BaseModel):
     stock : int
     description :str
     category_id :int
+
+class UserResponseSchema(BaseModel):
+    username: str
+    email:str
+    full_name: str
+    is_active: bool = True
+    role: str
+
+    class Config:
+        from_attributes = True
+
+class CartSchema(BaseModel):
+    user_id : int

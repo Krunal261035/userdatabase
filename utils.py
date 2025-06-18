@@ -1,4 +1,4 @@
-from fastapi import  Depends, HTTPException
+from fastapi import  Depends, HTTPException,Header
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import sessionmaker, Session
@@ -48,7 +48,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
             raise HTTPException(status_code=404, detail="User not found")
         return user
     except JWTError:
-        raise HTTPException(status_code=403, detail="Could not validate token")
+        raise HTTPException(status_code=401, detail="Could not validate token")
 
 def get_current_admin(user: UserModel = Depends(get_current_user)):
     if user.role != "admin":

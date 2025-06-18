@@ -1,6 +1,8 @@
-from sqlalchemy import Column, Integer, String, Boolean, TIMESTAMP, text,DateTime,func
+from sqlalchemy import Column, Integer, String, Boolean, TIMESTAMP, text,DateTime,func,ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
-
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
+from .AdminModel import *
 Base = declarative_base()
 
 class UserModel(Base):
@@ -29,5 +31,6 @@ class AddressModel(Base):
     postal_code = Column(String)
     phone_number = Column(String)
     is_default = Column(Boolean)
+
 
 

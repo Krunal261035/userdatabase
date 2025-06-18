@@ -27,3 +27,21 @@ class ProductModel(Base):
     stock = Column(Integer,index=True)
     description = Column(String,index=True)
     category_id = Column(Integer,index=True)
+
+
+class CartModel(Base):
+    __tablename__ = "carts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer,index=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+class CartitemsModel(Base):
+    __tablename__ = "cart_items"
+    id = Column(Integer, primary_key=True, index=True)
+    cart_id = Column(Integer,index=True)
+    product_id = Column(Integer,index=True)
+    quantity = Column(Integer,index=True)
+    added_at = Column(DateTime, server_default=func.now())
+    
+
