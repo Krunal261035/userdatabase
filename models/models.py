@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Boolean, TIMESTAMP, text,DateTime,func,ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, TIMESTAMP, text,DateTime,func
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from .AdminModel import *
@@ -17,6 +18,8 @@ class UserModel(Base):
     role = Column(String(20), default="user")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    # cart = relationship("CartModel", back_populates="user", uselist=False, cascade="all, delete", lazy="joined")
 
 class AddressModel(Base):
     __tablename__ = "shipping_addresses"

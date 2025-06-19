@@ -56,3 +56,14 @@ class AddressSchemaDisplay(BaseModel):
 class AddToCartSchema(BaseModel):
     product_id: int
     quantity: int
+
+class CartItemResponse(BaseModel):
+    id: int
+    product_name: str
+    quantity: int
+    price: float
+    total: float
+
+class UpdateCartItemSchema(BaseModel):
+    cart_item_id: int
+    quantity: int

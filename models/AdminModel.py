@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String,Text,DateTime,func,DECIMAL,Enum,ARRAY
+from sqlalchemy import Column, Integer, String,Text,DateTime,func,DECIMAL,Enum,ARRAY,ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 import enum
+from sqlalchemy.orm import relationship
 Base = declarative_base()
 
 class ProductCategoryModel(Base):
@@ -33,15 +34,16 @@ class CartModel(Base):
     __tablename__ = "carts"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer,index=True)
+    user_id = Column(Integer,ForeignKey("users.id", ondelete="SET NULL"))
     created_at = Column(DateTime, server_default=func.now())
+
 
 class CartitemsModel(Base):
     __tablename__ = "cart_items"
     id = Column(Integer, primary_key=True, index=True)
-    cart_id = Column(Integer,index=True)
-    product_id = Column(Integer,index=True)
+    cart_id = Column(Integer, ForeignKey("carts.id", ondelete="CASCADE"), nullable=False)
+    product_id = Column(Integer, ForeignKey("product.id"), nullable=False)
     quantity = Column(Integer,index=True)
     added_at = Column(DateTime, server_default=func.now())
-    
+
 

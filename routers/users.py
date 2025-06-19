@@ -2,10 +2,11 @@ from fastapi import FastAPI, Depends, HTTPException,APIRouter,Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import  Session
 from models.models import UserModel,AddressModel
-from schemas.schema import UserSchema,AddressSchema,UpdateUserSchema,AddressSchemaDisplay,AddToCartSchema
+from schemas.schema import UserSchema,AddressSchema,UpdateUserSchema,AddressSchemaDisplay,AddToCartSchema,CartItemResponse,UpdateCartItemSchema
 from database import get_db
 from utils import *
 from models.AdminModel import ProductModel,CartModel,CartitemsModel
+from models.AdminModel import ProductModel 
 # FastAPI App
 router = APIRouter()
 
@@ -179,28 +180,44 @@ def cart(body:AddToCartSchema,db:Session= Depends(get_db),token:UserModel= Depen
         return e
 
 
-@router.get("/cart/total")
-def total_cart(db:Session = Depends(get_db),token:UserModel=Depends(get_current_user)):
-    results = (
+
+
+@router.get("/cart/total", response_model=list[CartItemResponse])
+def get_cart_items(db: Session = Depends(get_db),token:UserModel= Depends(get_current_user)):
+    result = (
         db.query(
-            UserModel.username,
+            CartitemsModel.id,
             ProductModel.product_name,
             CartitemsModel.quantity,
             ProductModel.price,
             (CartitemsModel.quantity * ProductModel.price).label("total")
         )
-        .join(CartModel, CartModel.user_id == UserModel.id)
-        .join(CartitemsModel, CartitemsModel.cart_id == CartModel.id)
-        .join(ProductModel, ProductModel.id == CartitemsModel.product_id)
+        .join(ProductModel, CartitemsModel.product_id == ProductModel.id)
+        .join(CartModel, CartitemsModel.cart_id == CartModel.id)
         .all()
     )
-    return [
-        {
-            "username": row.username,
-            "product_name": row.product_name,
-            "quantity": row.quantity,
-            "price": float(row.price),
-            "total": float(row.total)
-        }
-        for row in results
-    ]
+    return result
+
+
+@router.put("/cart/update")
+def update_cart_item(data: UpdateCartItemSchema, db: Session = Depends(get_db),token:UserModel = Depends(get_current_user)):
+    cart_item = db.query(CartitemsModel).filter(CartitemsModel.id == data.cart_item_id).first()
+    if not cart_item:
+        raise HTTPException(status_code=404, detail="Cart item not found")
+
+    cart_item.quantity = data.quantity
+    db.commit()
+    db.refresh(cart_item)
+    return {"message": "Cart item updated successfully"}
+
+
+@router.delete("/cart/delete/{cart_item_id}")
+def delete_cart_item(cart_item_id: int, db: Session = Depends(get_db),token:UserModel=Depends(get_current_user)):
+    cart_item = db.query(CartitemsModel).filter(CartitemsModel.id == cart_item_id).first()
+    if not cart_item:
+        raise HTTPException(status_code=404, detail="Cart item not found")
+
+    db.delete(cart_item)
+    db.commit()
+    return {"message": "Cart item deleted successfully"}
+
