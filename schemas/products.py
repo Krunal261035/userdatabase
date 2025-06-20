@@ -30,3 +30,7 @@ class UserResponseSchema(BaseModel):
 
 class CartSchema(BaseModel):
     user_id : int
+
+class OrderFromCartRequest(BaseModel):
+    product_id: int
+    quantity: int

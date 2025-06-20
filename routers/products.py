@@ -11,6 +11,9 @@ product = APIRouter()
 @product.post("/productcategory")
 def addcategory(body:ProductCategory,db:Session=Depends(get_db),token : UserModel=Depends(get_current_admin)):
     try:
+        data = db.query(ProductCategoryModel).filter(ProductCategoryModel.name == body.name).first()
+        if data:
+            raise HTTPException(status_code=404,detail="Category already exist")
 
         category = ProductCategoryModel(**body.model_dump())
         db.add(category)
@@ -24,6 +27,9 @@ def addcategory(body:ProductCategory,db:Session=Depends(get_db),token : UserMode
 @product.post("/Products")
 def Product(body:ProductSchema,db:Session=Depends(get_db),token:UserModel = Depends(get_current_admin)):
     try:
+        exits = db.query(ProductModel).filter(ProductModel.product_name == body.product_name).first()
+        if exits:
+            raise HTTPException(status_code=404,detail="product name exits")
         product = ProductModel(**body.model_dump())
         db.add(product)
         db.commit()

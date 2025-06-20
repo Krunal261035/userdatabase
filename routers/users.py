@@ -5,8 +5,9 @@ from models.models import UserModel,AddressModel
 from schemas.schema import UserSchema,AddressSchema,UpdateUserSchema,AddressSchemaDisplay,AddToCartSchema,CartItemResponse,UpdateCartItemSchema
 from database import get_db
 from utils import *
-from models.AdminModel import ProductModel,CartModel,CartitemsModel
+from models.AdminModel import ProductModel,CartModel,CartitemsModel,OrderItemModel,OrderModel
 from models.AdminModel import ProductModel 
+from schemas.products import OrderFromCartRequest
 # FastAPI App
 router = APIRouter()
 
@@ -157,6 +158,8 @@ def products(db:Session=Depends(get_db)):
 @router.post("/add_Cart")
 def cart(body:AddToCartSchema,db:Session= Depends(get_db),token:UserModel= Depends(get_current_user)):
     try:
+        if token.role == "admin":
+            raise HTTPException (status_code=404,detail= "admin can not add items in the cart")
         cart = db.query(CartModel).filter_by(user_id = token.id).first()
         if not cart:
             cart = CartModel(user_id = token.id)
@@ -221,3 +224,44 @@ def delete_cart_item(cart_item_id: int, db: Session = Depends(get_db),token:User
     db.commit()
     return {"message": "Cart item deleted successfully"}
 
+
+@router.post("/order/place")
+def placeorder(body:OrderFromCartRequest,db:Session=Depends(get_db),user:UserModel=Depends(get_current_user)):
+    try:
+        product = db.query(ProductModel).filter(ProductModel.id == body.product_id).first()
+        if not product:
+            raise HTTPException(status_code=404,detail= "Product not found")
+        if product.stock<= body.quantity:
+            raise HTTPException(status_code=400, detail="Insufficient stock")
+
+        new_order = OrderModel(user_id = user.id,orderdate=datetime.now())
+        db.add(new_order)
+        db.commit()
+        db.refresh(new_order)  # get order.id
+
+        order_items = OrderItemModel(order_id = new_order.id,product_id = body.product_id,quantity = body.quantity,price = product.price)
+        db.add(order_items)
+        print(order_items)
+
+
+        product.stock-= body.quantity
+
+        cart = db.query(CartModel).filter(CartModel.user_id == user.id).first()
+        if cart:
+            cart_items = db.query(CartitemsModel).filter(CartitemsModel.cart_id == cart.id,CartitemsModel.product_id == body.product_id).first()
+            if cart_items:
+                db.delete(cart_items)
+        db.commit()
+        # db.refresh(cart_items)
+        return {
+            "message":"order created successfully",
+            "order": {
+                "order_id":new_order.id,
+                "order_date": new_order.orderdate,
+                "product_id": order_items.product_id,
+                "quantity": order_items.quantity,
+                "price_at_order":order_items.price
+            }
+        }
+    except Exception as e:
+        return e

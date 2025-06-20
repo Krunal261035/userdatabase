@@ -47,3 +47,18 @@ class CartitemsModel(Base):
     added_at = Column(DateTime, server_default=func.now())
 
 
+class OrderModel(Base):
+    __tablename__ = "orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer,index=True)
+    orderdate = Column(DateTime, server_default=func.now())
+
+class OrderItemModel(Base):
+    __tablename__ = "order_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer,index=True)
+    product_id = Column(Integer,index=True)
+    quantity = Column(Integer,index=True)
+    price = Column(Integer,index=True)
